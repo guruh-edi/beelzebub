@@ -21,5 +21,10 @@ commands:
     handler: "command not found"
 serverVersion: "OpenSSH_7.9p1"
 serverName: "ubuntu"
-passwordRegex: "^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$"
+passwordRegex: "^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456|1234)$"
 deadlineTimeoutSeconds: 60
+plugin:
+  llmProvider: ${LLM_PROVIDER}
+  llmModel: ${LLM_MODEL}
+  host: ${LLM_HOST}
+  openAISecretKey: ${OPEN_AI_SECRET_KEY}

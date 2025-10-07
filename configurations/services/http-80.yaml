@@ -4,14 +4,13 @@ address: ":80"
 description: "Wordpress 6.0 LLM"
 commands:
   - regex: "^(/index.php|/index.html|/)$"
-    handler:
-      <html>
-        <header>
-          <title>Wordpress 6 test page</title>
-        </header>
-        <body>
-          <h1>Hello from Wordpress</h1>
-        </body>
+    handler: <html>
+      <header>
+      <title>Wordpress 6 test page</title>
+      </header>
+      <body>
+      <h1>Hello from Wordpress</h1>
+      </body>
       </html>
     headers:
       - "Content-Type: text/html"
@@ -22,7 +21,7 @@ commands:
     plugin: "LLMHoneypot"
     statusCode: 200
 plugin:
+  llmProvider: ${LLM_PROVIDER}
   llmModel: ${LLM_MODEL}
   host: ${LLM_HOST}
-  ollamaModel: ${OLLAMA_MODEL}
-  #openAISecretKey: ${OPENAISECRETKEY}
+  openAISecretKey: ${OPEN_AI_SECRET_KEY}

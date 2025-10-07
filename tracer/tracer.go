@@ -2,15 +2,14 @@
 package tracer
 
 import (
-	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	log "github.com/sirupsen/logrus"
 )
 
-// Workers is the number of workers that will
 const Workers = 5
 
 type Event struct {
@@ -27,6 +26,7 @@ type Event struct {
 	Password        string
 	Client          string
 	Headers         string
+	HeadersMap      map[string][]string
 	Cookies         string
 	UserAgent       string
 	HostHTTPRequest string
@@ -36,6 +36,8 @@ type Event struct {
 	Description     string
 	SourceIp        string
 	SourcePort      string
+	TLSServerName   string
+	Handler         string
 }
 
 type (
@@ -47,10 +49,11 @@ const (
 	HTTP Protocol = iota
 	SSH
 	TCP
+	MCP
 )
 
 func (protocol Protocol) String() string {
-	return [...]string{"HTTP", "SSH", "TCP"}[protocol]
+	return [...]string{"HTTP", "SSH", "TCP", "MCP"}[protocol]
 }
 
 const (
@@ -77,6 +80,9 @@ type tracer struct {
 	eventsSSHTotal  prometheus.Counter
 	eventsTCPTotal  prometheus.Counter
 	eventsHTTPTotal prometheus.Counter
+	eventsMCPTotal  prometheus.Counter
+
+	strategyMutex sync.RWMutex
 }
 
 var lock = &sync.Mutex{}
@@ -111,6 +117,11 @@ func GetInstance(defaultStrategy Strategy) *tracer {
 					Name:      "http_events_total",
 					Help:      "The total number of HTTP events",
 				}),
+				eventsMCPTotal: promauto.NewCounter(prometheus.CounterOpts{
+					Namespace: "beelzebub",
+					Name:      "mcp_events_total",
+					Help:      "The total number of MCP events",
+				}),
 			}
 
 			for i := 0; i < Workers; i++ {
@@ -127,8 +138,16 @@ func GetInstance(defaultStrategy Strategy) *tracer {
 	return singleton
 }
 
-func (tracer *tracer) setStrategy(strategy Strategy) {
+func (tracer *tracer) SetStrategy(strategy Strategy) {
+	tracer.strategyMutex.Lock()
+	defer tracer.strategyMutex.Unlock()
 	tracer.strategy = strategy
+}
+
+func (tracer *tracer) GetStrategy() Strategy {
+	tracer.strategyMutex.RLock()
+	defer tracer.strategyMutex.RUnlock()
+	return tracer.strategy
 }
 
 func (tracer *tracer) TraceEvent(event Event) {
@@ -147,6 +166,8 @@ func (tracer *tracer) updatePrometheusCounters(protocol string) {
 		tracer.eventsSSHTotal.Inc()
 	case TCP.String():
 		tracer.eventsTCPTotal.Inc()
+	case MCP.String():
+		tracer.eventsMCPTotal.Inc()
 	}
 	tracer.eventsTotal.Inc()
 }

@@ -23,8 +23,7 @@ import (
 	"golang.org/x/term"
 )
 
-type SSHStrategy struct {
-}
+type SSHStrategy struct{}
 
 func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.BeelzebubServiceConfiguration, tr tracer.Tracer) error {
 	file, err := os.OpenFile("./configurations/log/beelzebub.json", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0770)
@@ -56,17 +55,17 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				sessionStart := time.Now()
 				uuidSession := uuid.New()
 
-				src_ip, src_port, _ := net.SplitHostPort(sess.RemoteAddr().String())
-				_, dest_port, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
+				srcIP, srcPort, _ := net.SplitHostPort(sess.RemoteAddr().String())
+				_, destPort, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
 				clientVersion := sess.Context().ClientVersion()
 
 				// SSH Inline Sessions
 
 				if sess.RawCommand() != "" {
 					for _, command := range beelzebubServiceConfiguration.Commands {
-						matched, err := regexp.MatchString(command.Regex, sess.RawCommand())
+						matched, err := regexp.MatchString(command.RegexStr, sess.RawCommand())
 						if err != nil {
-							log.Errorf("Error regex: %s, %s", command.Regex, err.Error())
+							log.Errorf("Error regex: %s, %s", command.RegexStr, err.Error())
 							continue
 						}
 
@@ -75,20 +74,19 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							if command.Plugin == plugins.LLMPluginName {
 
-								llmModel, err := plugins.FromStringToLLMModel(beelzebubServiceConfiguration.Plugin.LLMModel)
-
+								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMModel)
 								if err != nil {
 									log.Errorf("Error fromString: %s", err.Error())
 									commandOutput = "command not found"
 								}
 
 								llmHoneypot := plugins.LLMHoneypot{
-									Histories:   make([]plugins.Message, 0),
-									OpenAIKey:   beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-									Protocol:    tracer.SSH,
-									Host:        beelzebubServiceConfiguration.Plugin.Host,
-									Model:       llmModel,
-									OllamaModel: beelzebubServiceConfiguration.Plugin.OllamaModel,
+									Histories: make([]plugins.Message, 0),
+									OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+									Protocol:  tracer.SSH,
+									Host:      beelzebubServiceConfiguration.Plugin.Host,
+									Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
+									Provider:  llmProvider,
 								}
 
 								llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
@@ -102,24 +100,24 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							sess.Write(append([]byte(commandOutput), '\n'))
 							sessionDuration := time.Since(sessionStart).Seconds()
 							log.WithFields(log.Fields{
-								"message":  "New SSH Inline Session",
-								"protocol": tracer.SSH.String(),
-								"src_ip":   src_ip,
-								"src_port": src_port,
-								"dest_port": dest_port,
-								"status":   tracer.Start.String(),
-								"session":  uuidSession.String(),
-								"environ":  strings.Join(sess.Environ(), ","),
-								"username": sess.User(),
-								"service":  beelzebubServiceConfiguration.Description,
-								"input":    sess.RawCommand(),
-								"output":   commandOutput,
+								"message":   "New SSH Inline Session",
+								"protocol":  tracer.SSH.String(),
+								"src_ip":    srcIP,
+								"src_port":  srcPort,
+								"dest_port": destPort,
+								"status":    tracer.Start.String(),
+								"session":   uuidSession.String(),
+								"environ":   strings.Join(sess.Environ(), ","),
+								"username":  sess.User(),
+								"service":   beelzebubServiceConfiguration.Description,
+								"input":     sess.RawCommand(),
+								"output":    commandOutput,
 							}).Info("New SSH Inline Session")
 							log.WithFields(log.Fields{
 								"message":          "End SSH Inline Session",
-								"src_ip":           src_ip,
-								"src_port":         src_port,
-								"dest_port":        dest_port,
+								"src_ip":           srcIP,
+								"src_port":         srcPort,
+								"dest_port":        destPort,
 								"status":           tracer.End.String(),
 								"protocol":         tracer.SSH.String(),
 								"session":          uuidSession.String(),
@@ -135,9 +133,9 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				log.WithFields(log.Fields{
 					"message":        "New SSH Session",
 					"protocol":       tracer.SSH.String(),
-					"src_ip":         src_ip,
-					"src_port":       src_port,
-					"dest_port":      dest_port,
+					"src_ip":         srcIP,
+					"src_port":       srcPort,
+					"dest_port":      destPort,
 					"status":         tracer.Start.String(),
 					"session":        uuidSession.String(),
 					"environ":        strings.Join(sess.Environ(), ","),
@@ -162,9 +160,9 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 						break
 					}
 					for _, command := range beelzebubServiceConfiguration.Commands {
-						matched, err := regexp.MatchString(command.Regex, commandInput)
+						matched, err := regexp.MatchString(command.RegexStr, commandInput)
 						if err != nil {
-							log.Errorf("Error regex: %s, %s", command.Regex, err.Error())
+							log.Errorf("Error regex: %s, %s", command.RegexStr, err.Error())
 							continue
 						}
 
@@ -173,20 +171,19 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							if command.Plugin == plugins.LLMPluginName {
 
-								llmModel, err := plugins.FromStringToLLMModel(beelzebubServiceConfiguration.Plugin.LLMModel)
-
+								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMModel)
 								if err != nil {
 									log.Errorf("Error fromString: %s", err.Error())
 									commandOutput = "command not found"
 								}
 
 								llmHoneypot := plugins.LLMHoneypot{
-									Histories:   histories,
-									OpenAIKey:   beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-									Protocol:    tracer.SSH,
-									Host:        beelzebubServiceConfiguration.Plugin.Host,
-									Model:       llmModel,
-									OllamaModel: beelzebubServiceConfiguration.Plugin.OllamaModel,
+									Histories: histories,
+									OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+									Protocol:  tracer.SSH,
+									Host:      beelzebubServiceConfiguration.Plugin.Host,
+									Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
+									Provider:  llmProvider,
 								}
 
 								llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
@@ -204,9 +201,9 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							log.WithFields(log.Fields{
 								"message":        "New SSH Terminal Session",
-								"src_ip":         src_ip,
-								"src_port":       src_port,
-								"dest_port":      dest_port,
+								"src_ip":         srcIP,
+								"src_port":       srcPort,
+								"dest_port":      destPort,
 								"status":         tracer.Interaction.String(),
 								"input":          commandInput,
 								"input_duration": fmt.Sprintf("%.2fs", commandDuration), // Log seconds
@@ -223,9 +220,9 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				sessionDuration := time.Since(sessionStart).Seconds()
 				log.WithFields(log.Fields{
 					"message":          "End SSH Session",
-					"src_ip":           src_ip,
-					"src_port":         src_port,
-					"dest_port":        dest_port,
+					"src_ip":           srcIP,
+					"src_port":         srcPort,
+					"dest_port":        destPort,
 					"status":           tracer.End.String(),
 					"protocol":         tracer.SSH.String(),
 					"session":          uuidSession.String(),
@@ -233,8 +230,8 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				}).Info("End SSH Session")
 			},
 			PasswordHandler: func(ctx ssh.Context, password string) bool {
-				src_ip, src_port, _ := net.SplitHostPort(ctx.RemoteAddr().String())
-				_, dest_port, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
+				srcIP, srcPort, _ := net.SplitHostPort(ctx.RemoteAddr().String())
+				_, destPort, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
 				clientVersion := ctx.ClientVersion()
 
 				log.WithFields(log.Fields{
@@ -244,9 +241,9 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 					"username":  ctx.User(),
 					"password":  password,
 					"client":    clientVersion,
-					"src_ip":    src_ip,
-					"src_port":  src_port,
-					"dest_port": dest_port,
+					"src_ip":    srcIP,
+					"src_port":  srcPort,
+					"dest_port": destPort,
 					"session":   uuid.New().String(),
 					"service":   beelzebubServiceConfiguration.Description,
 				}).Info("New SSH attempt")

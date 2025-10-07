@@ -3,14 +3,15 @@ package builder
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+
 	"github.com/mariocandela/beelzebub/v3/parser"
 	"github.com/mariocandela/beelzebub/v3/plugins"
 	"github.com/mariocandela/beelzebub/v3/protocols"
 	"github.com/mariocandela/beelzebub/v3/protocols/strategies"
 	"github.com/mariocandela/beelzebub/v3/tracer"
-	"io"
-	"net/http"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -64,7 +65,7 @@ func (b *Builder) buildRabbitMQ(rabbitMQURI string) error {
 		return err
 	}
 
-	//creates a queue if it doesn't already exist, or ensures that an existing queue matches the same parameters.
+	// creates a queue if it doesn't already exist, or ensures that an existing queue matches the same parameters.
 	if _, err = b.rabbitMQChannel.QueueDeclare(RabbitmqQueueName, false, false, false, false, nil); err != nil {
 		return err
 	}
@@ -109,6 +110,7 @@ Honeypot Framework, happy hacking!`)
 	secureShellStrategy := &strategies.SSHStrategy{}
 	hypertextTransferProtocolStrategy := &strategies.HTTPStrategy{}
 	transmissionControlProtocolStrategy := &strategies.TCPStrategy{}
+	modelContextProtocolStrategy := &strategies.MCPStrategy{}
 
 	// Init Tracer strategies, and set the trace strategy default HTTP
 	protocolManager := protocols.InitProtocolManager(b.traceStrategy, hypertextTransferProtocolStrategy)
@@ -122,7 +124,7 @@ Honeypot Framework, happy hacking!`)
 			return err
 		} else {
 			if len(honeypotsConfiguration) == 0 {
-				return errors.New("No honeypots configuration found")
+				return errors.New("no honeypots configuration found")
 			}
 			b.beelzebubServicesConfiguration = honeypotsConfiguration
 		}
@@ -132,20 +134,19 @@ Honeypot Framework, happy hacking!`)
 		switch beelzebubServiceConfiguration.Protocol {
 		case "http":
 			protocolManager.SetProtocolStrategy(hypertextTransferProtocolStrategy)
-			break
 		case "ssh":
 			protocolManager.SetProtocolStrategy(secureShellStrategy)
-			break
 		case "tcp":
 			protocolManager.SetProtocolStrategy(transmissionControlProtocolStrategy)
-			break
+		case "mcp":
+			protocolManager.SetProtocolStrategy(modelContextProtocolStrategy)
 		default:
-			log.Fatalf("Protocol %s not managed", beelzebubServiceConfiguration.Protocol)
+			log.Fatalf("protocol %s not managed", beelzebubServiceConfiguration.Protocol)
 			continue
 		}
 
 		if err := protocolManager.InitService(beelzebubServiceConfiguration); err != nil {
-			return errors.New(fmt.Sprintf("Error during init protocol: %s, %s", beelzebubServiceConfiguration.Protocol, err.Error()))
+			return fmt.Errorf("error during init protocol: %s, %s", beelzebubServiceConfiguration.Protocol, err.Error())
 		}
 	}
 

@@ -14,8 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type TCPStrategy struct {
-}
+type TCPStrategy struct{}
 
 func (tcpStrategy *TCPStrategy) Init(beelzebubServiceConfiguration parser.BeelzebubServiceConfiguration, tr tracer.Tracer) error {
 	file, err := os.OpenFile("./configurations/log/beelzebub.json", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0770)
@@ -43,7 +42,7 @@ func (tcpStrategy *TCPStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 			if conn, err := listen.Accept(); err == nil {
 				go func() {
 					conn.SetDeadline(time.Now().Add(time.Duration(beelzebubServiceConfiguration.DeadlineTimeoutSeconds) * time.Second))
-					conn.Write([]byte(fmt.Sprintf("%s\n", beelzebubServiceConfiguration.Banner)))
+					conn.Write(fmt.Appendf([]byte{}, "%s\n", beelzebubServiceConfiguration.Banner))
 
 					buffer := make([]byte, 1024)
 					command := ""
@@ -52,17 +51,17 @@ func (tcpStrategy *TCPStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 						command = string(buffer[:n])
 					}
 
-					src_ip, src_port, _ := net.SplitHostPort(conn.RemoteAddr().String())
-					_, dest_port, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
+					srcIP, srcPort, _ := net.SplitHostPort(conn.RemoteAddr().String())
+					_, destPort, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
 
 					log.WithFields(log.Fields{
 						"message":   "New TCP attempt",
 						"protocol":  tracer.TCP.String(),
 						"command":   command,
 						"status":    tracer.Stateless.String(),
-						"src_ip":    src_ip,
-						"src_port":  src_port,
-						"dest_port": dest_port,
+						"src_ip":    srcIP,
+						"src_port":  srcPort,
+						"dest_port": destPort,
 						"session":   uuid.New().String(),
 						"service":   beelzebubServiceConfiguration.Description,
 					}).Info("New TCP attempt")

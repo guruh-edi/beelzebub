@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -52,7 +53,8 @@ type Plugin struct {
 	OpenAISecretKey string `yaml:"openAISecretKey"`
 	Host            string `yaml:"host"`
 	LLMModel        string `yaml:"llmModel"`
-	OllamaModel     string `yaml:"ollamaModel"`
+	LLMProvider     string `yaml:"llmProvider"`
+	Prompt          string `yaml:"prompt"`
 }
 
 // UnmarshalYAML customizes the unmarshalling of the Plugin struct
@@ -63,9 +65,10 @@ func (p *Plugin) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	raw.OpenAISecretKey = expandEnv(raw.OpenAISecretKey)
+	raw.LLMProvider = expandEnv(raw.LLMProvider)
 	raw.LLMModel = expandEnv(raw.LLMModel)
 	raw.Host = expandEnv(raw.Host)
-	raw.OllamaModel = expandEnv(raw.OllamaModel)
+	raw.Prompt = expandEnv(raw.Prompt)
 	// fmt.Println("OllamaModel: ", raw.OllamaModel)
 	*p = Plugin(raw)
 	return nil
@@ -82,6 +85,8 @@ type BeelzebubServiceConfiguration struct {
 	Protocol               string    `yaml:"protocol"`
 	Address                string    `yaml:"address"`
 	Commands               []Command `yaml:"commands"`
+	Tools                  []Tool    `yaml:"tools"`
+	FallbackCommand        Command   `yaml:"fallbackCommand"`
 	ServerVersion          string    `yaml:"serverVersion"`
 	ServerName             string    `yaml:"serverName"`
 	DeadlineTimeoutSeconds int       `yaml:"deadlineTimeoutSeconds"`
@@ -89,15 +94,33 @@ type BeelzebubServiceConfiguration struct {
 	Description            string    `yaml:"description"`
 	Banner                 string    `yaml:"banner"`
 	Plugin                 Plugin    `yaml:"plugin"`
+	TLSCertPath            string    `yaml:"tlsCertPath"`
+	TLSKeyPath             string    `yaml:"tlsKeyPath"`
 }
 
 // Command is the struct that contains the configurations of the commands
 type Command struct {
-	Regex      string   `yaml:"regex"`
-	Handler    string   `yaml:"handler"`
-	Headers    []string `yaml:"headers"`
-	StatusCode int      `yaml:"statusCode"`
-	Plugin     string   `yaml:"plugin"`
+	RegexStr   string         `yaml:"regex"`
+	Regex      *regexp.Regexp `yaml:"-"` // This field is parsed, not stored in the config itself.
+	Handler    string         `yaml:"handler"`
+	Headers    []string       `yaml:"headers"`
+	StatusCode int            `yaml:"statusCode"`
+	Plugin     string         `yaml:"plugin"`
+	Name       string         `yaml:"name"`
+}
+
+// Tool is the struct that contains the configurations of the MCP Honeypot
+type Tool struct {
+	Name        string  `yaml:"name"`
+	Description string  `yaml:"description"`
+	Params      []Param `yaml:"params"`
+	Handler     string  `yaml:"handler"`
+}
+
+// Param is the struct that contains the configurations of the parameters of the tools
+type Param struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
 }
 
 type configurationsParser struct {
@@ -157,10 +180,27 @@ func (bp configurationsParser) ReadConfigurationsServices() ([]BeelzebubServiceC
 			return nil, fmt.Errorf("in file %s: %v", filePath, err)
 		}
 		log.Debug(beelzebubServiceConfiguration)
+		if err := beelzebubServiceConfiguration.CompileCommandRegex(); err != nil {
+			return nil, fmt.Errorf("in file %s: invalid regex: %v", filePath, err)
+		}
 		servicesConfiguration = append(servicesConfiguration, *beelzebubServiceConfiguration)
 	}
 
 	return servicesConfiguration, nil
+}
+
+// CompileCommandRegex is the method that compiles the regular expression for each configured Command.
+func (c *BeelzebubServiceConfiguration) CompileCommandRegex() error {
+	for i, command := range c.Commands {
+		if command.RegexStr != "" {
+			rex, err := regexp.Compile(command.RegexStr)
+			if err != nil {
+				return err
+			}
+			c.Commands[i].Regex = rex
+		}
+	}
+	return nil
 }
 
 func gelAllFilesNameByDirName(dirName string) ([]string, error) {

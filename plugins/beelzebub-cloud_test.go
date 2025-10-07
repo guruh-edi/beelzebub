@@ -2,13 +2,15 @@ package plugins
 
 import (
 	"fmt"
+	"net/http"
+	"regexp"
+	"testing"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/jarcoal/httpmock"
 	"github.com/mariocandela/beelzebub/v3/parser"
 	"github.com/mariocandela/beelzebub/v3/tracer"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
 )
 
 func TestBuildSendEventFailValidation(t *testing.T) {
@@ -85,7 +87,7 @@ func TestGetHoneypotsConfigurationsWithResults(t *testing.T) {
 			resp, err := httpmock.NewJsonResponse(200, &[]HoneypotConfigResponseDTO{
 				{
 					ID:      "123456",
-					Config:  "apiVersion: \"v1\"\nprotocol: \"ssh\"\naddress: \":2222\"\ndescription: \"SSH interactive ChatGPT\"\ncommands:\n  - regex: \"^(.+)$\"\n    plugin: \"LLMHoneypot\"\nserverVersion: \"OpenSSH\"\nserverName: \"ubuntu\"\npasswordRegex: \"^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$\"\ndeadlineTimeoutSeconds: 60\nplugin:\n  llmModel: \"gpt4-o\"\n  openAISecretKey: \"1234\"\n",
+					Config:  "apiVersion: \"v1\"\nprotocol: \"ssh\"\naddress: \":2222\"\ndescription: \"SSH interactive ChatGPT\"\ncommands:\n  - regex: \"^(.+)$\"\n    plugin: \"LLMHoneypot\"\nserverVersion: \"OpenSSH\"\nserverName: \"ubuntu\"\npasswordRegex: \"^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$\"\ndeadlineTimeoutSeconds: 60\nplugin:\n  llmModel: \"gpt-4o\"\n  openAISecretKey: \"1234\"\n",
 					TokenID: "1234567",
 				},
 			})
@@ -111,8 +113,9 @@ func TestGetHoneypotsConfigurationsWithResults(t *testing.T) {
 			Description: "SSH interactive ChatGPT",
 			Commands: []parser.Command{
 				{
-					Regex:  "^(.+)$",
-					Plugin: "LLMHoneypot",
+					RegexStr: "^(.+)$",
+					Regex:    regexp.MustCompile("^(.+)$"),
+					Plugin:   "LLMHoneypot",
 				},
 			},
 			ServerVersion:          "OpenSSH",
@@ -120,7 +123,7 @@ func TestGetHoneypotsConfigurationsWithResults(t *testing.T) {
 			PasswordRegex:          "^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$",
 			DeadlineTimeoutSeconds: 60,
 			Plugin: parser.Plugin{
-				LLMModel:        "gpt4-o",
+				LLMModel:        "gpt-4o",
 				OpenAISecretKey: "1234",
 			},
 		},

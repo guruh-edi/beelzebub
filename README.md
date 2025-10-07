@@ -1,33 +1,56 @@
 # Beelzebub (Adjusted for T-Pot)
 
+
 [![CI](https://github.com/mariocandela/beelzebub/actions/workflows/ci.yml/badge.svg)](https://github.com/mariocandela/beelzebub/actions/workflows/ci.yml) [![Docker](https://github.com/mariocandela/beelzebub/actions/workflows/docker-image.yml/badge.svg)](https://github.com/mariocandela/beelzebub/actions/workflows/docker-image.yml) [![codeql](https://github.com/mariocandela/beelzebub/actions/workflows/codeql.yml/badge.svg)](https://github.com/mariocandela/beelzebub/actions/workflows/codeql.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mariocandela/beelzebub/v3)](https://goreportcard.com/report/github.com/mariocandela/beelzebub/v3)
 [![codecov](https://codecov.io/gh/mariocandela/beelzebub/graph/badge.svg?token=8XTK7D4WHE)](https://codecov.io/gh/mariocandela/beelzebub)
 [![Go Reference](https://pkg.go.dev/badge/github.com/mariocandela/beelzebub/v3.svg)](https://pkg.go.dev/github.com/mariocandela/beelzebub/v3)
-[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)  
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/mariocandela/beelzebub)](https://archestra.ai/mcp-catalog/mariocandela__beelzebub)
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 ## Overview
 
 Beelzebub is an advanced honeypot framework designed to provide a highly secure environment for detecting and analyzing cyber attacks. It offers a low code approach for easy implementation and uses AI to mimic the behavior of a high-interaction honeypot.
 
-<img src="https://beelzebub.netlify.app/go-beelzebub.png" alt="Beelzebub Logo" width="200"/>
+![github beelzebub - inception program](https://github.com/user-attachments/assets/e180d602-6de9-4c48-92ad-eb0ef3c5322d)
+## Key Features
 
-## LLM Honeypot
+Beelzebub offers a wide range of features to enhance your honeypot environment:
 
-[![asciicast](https://asciinema.org/a/665295.svg)](https://asciinema.org/a/665295)
+- Low-code configuration: YAML-based, modular service definition
+- LLM integration: The LLM convincingly simulates a real system, creating high-interaction honeypot experiences, while actually maintaining low-interaction architecture for enhanced security and easy management.
+- Multi-protocol support: SSH, HTTP, TCP, MCP(Detect prompt injection against LLM agents)
+- Prometheus metrics & observability 
+- Docker & Kubernetes ready
+- ELK stack ready, docs: [Official ELK integration](https://www.elastic.co/docs/reference/integrations/beelzebub)
 
+## LLM Honeypot Demo
+![demo-beelzebub](https://github.com/user-attachments/assets/4dbb9a67-6c12-49c5-82ac-9b3e340406ca)
 
-## Telegram Bot for Real-Time Attacks
+## Code Quality
 
-Stay updated on real-time attacks by joining our dedicated Telegram channel: [Telegram Channel](https://t.me/beelzebubhoneypot)
+We are strongly committed to maintaining high code quality in the Beelzebub project. Our development workflow includes comprehensive testing, code reviews, static analysis, and continuous integration to ensure the reliability and maintainability of the codebase.
 
-## Examples
+### What We Do
 
-To better understand the capabilities of Beelzebub, you can explore our example repository: [mariocandela/beelzebub-example](https://github.com/mariocandela/beelzebub-example)
+* **Automated Testing:**
+  Both unit and integration tests are run on every pull request to catch regressions and ensure stability.
+
+* **Static Analysis:**
+  We use tools like Go Report Card and CodeQL to automatically check for code quality, style, and security issues.
+
+* **Code Coverage:**
+  Our test coverage is monitored with [Codecov](https://codecov.io/gh/mariocandela/beelzebub), and we aim for extensive coverage of all core components.
+
+* **Continuous Integration:**
+  Every commit triggers automated CI pipelines on GitHub Actions, which run all tests and quality checks.
+
+* **Code Reviews:**
+  All new contributions undergo peer review to maintain consistency and high standards across the project.
 
 ## Quick Start
 
-We provide two quick start options for build and run Beelzebub: using Docker Compose or the Go compiler.
+You can run Beelzebub via Docker, Go compiler(cross device), or Helm (Kubernetes).
 
 ### Using Docker Compose
 
@@ -42,6 +65,7 @@ We provide two quick start options for build and run Beelzebub: using Docker Com
    ```bash
    $ docker-compose up -d
    ```
+
 
 ### Using Go Compiler
 
@@ -78,41 +102,6 @@ We provide two quick start options for build and run Beelzebub: using Docker Com
    ```bash
    $ helm upgrade beelzebub ./beelzebub-chart
    ```
-## Testing
-
-We provide two types of tests: unit tests and integration tests.
-
-### Unit Tests
-
-To run unit tests:
-
-```bash
-$ make test.unit
-```
-
-### Integration Tests
-
-To run integration tests:
-
-```bash
-$ make test.dependencies.start
-$ make test.integration
-$ make test.dependencies.down
-```
-
-## Key Features
-
-Beelzebub offers a wide range of features to enhance your honeypot environment:
-
-- Support for Ollama
-- Support for OpenAI
-- SSH Honeypot
-- HTTP Honeypot
-- TCP Honeypot
-- Prometheus openmetrics integration
-- Docker integration
-- RabbitMQ integration
-- kubernetes
 
 ## Example Configuration
 
@@ -126,7 +115,75 @@ $ ./beelzebub --confCore ./configurations/beelzebub.yaml --confServices ./config
 
 Here are some example configurations for different honeypot scenarios:
 
-#### Example HTTP Honeypot on Port 80
+### MCP Honeypot
+
+#### Why choose an MCP Honeypot?
+
+An MCP honeypot is a **decoy tool** that the agent should never invoke under normal circumstances. Integrating this strategy into your agent pipeline offers three key benefits:
+
+* **Real-time detection of guardrail bypass attempts.**
+  
+  Instantly identify when a prompt injection attack successfully convinces the agent to invoke a restricted tool.
+* **Automatic collection of real attack prompts for guardrail fine-tuning.**
+  
+   Every activation logs genuine malicious prompts, enabling continuous improvement of your filtering mechanisms.
+* **Continuous monitoring of attack trends through key metrics (HAR, TPR, MTP).**
+  
+   Track exploit frequency and system resilience using objective, actionable measurements.
+
+![video-mcp-diagram](https://github.com/user-attachments/assets/e04fd19e-9537-427e-9131-9bee31d8ebad)
+
+##### Example MCP Honeypot Configuration
+
+###### mcp-8000.yaml
+
+```yaml
+apiVersion: "v1"
+protocol: "mcp"
+address: ":8000"
+description: "MCP Honeypot"
+tools:
+  - name: "tool:user-account-manager"
+    description: "Tool for querying and modifying user account details. Requires administrator privileges."
+    params:
+      - name: "user_id"
+        description: "The ID of the user account to manage."
+      - name: "action"
+        description: "The action to perform on the user account, possible values are: get_details, reset_password, deactivate_account"
+    handler: |
+      {
+        "tool_id": "tool:user-account-manager",
+        "status": "completed",
+        "output": {
+          "message": "Tool 'tool:user-account-manager' executed successfully. Results are pending internal processing and will be logged.",
+          "result": {
+            "operation_status": "success",
+            "details": "email: kirsten@gmail.com, role: admin, last-login: 02/07/2025"
+          }
+        }
+      }
+  - name: "tool:system-log"
+    description: "Tool for querying system logs. Requires administrator privileges."
+    params:
+      - name: "filter"
+        description: "The input used to filter the logs."
+    handler: |
+      {
+        "tool_id": "tool:system-log",
+        "status": "completed",
+        "output": {
+          "message": "Tool 'tool:system-log' executed successfully. Results are pending internal processing and will be logged.",
+          "result": {
+            "operation_status": "success",
+            "details": "Info: email: kirsten@gmail.com, last-login: 02/07/2025"
+          }
+        }
+      }
+```
+
+#### Invoke remotely: beelzebub:port/mcp (Streamable HTTPServer).
+
+### HTTP Honeypot
 
 ###### http-80.yaml
 
@@ -191,7 +248,7 @@ commands:
     statusCode: 404
 ```
 
-#### Example HTTP Honeypot on Port 8080
+### HTTP Honeypot
 
 ###### http-8080.yaml
 
@@ -209,11 +266,11 @@ commands:
     statusCode: 401
 ```
 
-#### Example SSH Honeypot
+### SSH Honeypot
 
-###### Honeypot LLM Honeypots
+###### LLM Honeypots
 
-Example with OpenAI GPT-4:
+Follow a SSH LLM Honeypot using OpenAI as provider LLM:
 
 ```yaml
 apiVersion: "v1"
@@ -228,11 +285,12 @@ serverName: "ubuntu"
 passwordRegex: "^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$"
 deadlineTimeoutSeconds: 60
 plugin:
-   llmModel: "gpt4-o"
+   llmProvider: "openai"
+   llmModel: "gpt-4o" #Models https://platform.openai.com/docs/models
    openAISecretKey: "sk-proj-123456"
 ```
 
-Example with Ollama Llama3:
+Examples with local Ollama instance using model codellama:7b:
 
 ```yaml
 apiVersion: "v1"
@@ -247,11 +305,32 @@ serverName: "ubuntu"
 passwordRegex: "^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$"
 deadlineTimeoutSeconds: 60
 plugin:
-   llmModel: "llama3"
+   llmProvider: "ollama"
+   llmModel: "codellama:7b" #Models https://ollama.com/search
    host: "http://example.com/api/chat" #default http://localhost:11434/api/chat
 ```
+Example with custom prompt:
 
-###### SSH Honeypot on Port 22
+```yaml
+apiVersion: "v1"
+protocol: "ssh"
+address: ":2222"
+description: "SSH interactive OpenAI  GPT-4"
+commands:
+  - regex: "^(.+)$"
+    plugin: "LLMHoneypot"
+serverVersion: "OpenSSH"
+serverName: "ubuntu"
+passwordRegex: "^(root|qwerty|Smoker666|123456|jenkins|minecraft|sinus|alex|postgres|Ly123456)$"
+deadlineTimeoutSeconds: 60
+plugin:
+   llmProvider: "openai"
+   llmModel: "gpt-4o"
+   openAISecretKey: "sk-proj-123456"
+   prompt: "You will act as an Ubuntu Linux terminal. The user will type commands, and you are to reply with what the terminal should show. Your responses must be contained within a single code block."
+```
+
+###### SSH Honeypot
 
 ###### ssh-22.yaml
 
@@ -285,6 +364,29 @@ passwordRegex: "^(root|qwerty|Smoker666)$"
 deadlineTimeoutSeconds: 60
 ```
 
+## Testing
+
+Maintaining excellent code quality is essential for security-focused projects like Beelzebub. We welcome all contributors who share our commitment to robust, readable, and reliable code!
+
+### Unit Tests
+
+For contributor, we have a comprehensive suite of unit/integration tests that cover the core functionality of Beelzebub. To run the unit tests, use the following command:
+
+```bash
+$ make test.unit
+```
+
+### Integration Tests
+
+To run integration tests:
+
+```bash
+$ make test.dependencies.start
+$ make test.integration
+$ make test.dependencies.down
+```
+
+
 ## Roadmap
 
 Our future plans for Beelzebub include developing it into a robust PaaS platform.
@@ -297,7 +399,12 @@ Happy hacking!
 
 ## License
 
-Beelzebub is licensed under the [MIT License](LICENSE).
+Beelzebub is licensed under the [GNU GPL v3 License](LICENSE).
 
-## Supported by JetBrains
-[![JetBrains Black Box Logo logo](https://resources.jetbrains.com/storage/products/company/brand/logos/jb_square.png)](https://jb.gg/OpenSourceSupport)
+## Beelzebub is a member of NVIDIA Inception
+![nvidia-inception-program-badge-rgb-for-screen](https://github.com/user-attachments/assets/62c6cdf8-3999-42ce-aea6-6c9045bc1d4c)
+
+## Supported by
+[![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
+
+![gitbook logo](https://i.postimg.cc/VNQh5hnk/gitbook.png)

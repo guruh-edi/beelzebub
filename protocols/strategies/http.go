@@ -42,7 +42,7 @@ func (httpStrategy HTTPStrategy) Init(beelzebubServiceConfiguration parser.Beelz
 	serverMux.HandleFunc("/", func(responseWriter http.ResponseWriter, request *http.Request) {
 		traceRequest(request, tr, beelzebubServiceConfiguration.Description, beelzebubServiceConfiguration.Address)
 		for _, command := range httpStrategy.beelzebubServiceConfiguration.Commands {
-			matched, err := regexp.MatchString(command.Regex, request.RequestURI)
+			matched, err := regexp.MatchString(command.RegexStr, request.RequestURI)
 			if err != nil {
 				log.Errorf("Error regex: %s, %s", command.Regex, err.Error())
 				continue
@@ -53,20 +53,19 @@ func (httpStrategy HTTPStrategy) Init(beelzebubServiceConfiguration parser.Beelz
 
 				if command.Plugin == plugins.LLMPluginName {
 
-					llmModel, err := plugins.FromStringToLLMModel(beelzebubServiceConfiguration.Plugin.LLMModel)
-
+					llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMModel)
 					if err != nil {
 						log.Errorf("Error fromString: %s", err.Error())
 						responseHTTPBody = "404 Not Found!"
 					}
 
 					llmHoneypot := plugins.LLMHoneypot{
-						Histories:   make([]plugins.Message, 0),
-						OpenAIKey:   beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-						Protocol:    tracer.HTTP,
-						Host:        beelzebubServiceConfiguration.Plugin.Host,
-						Model:       llmModel,
-						OllamaModel: beelzebubServiceConfiguration.Plugin.OllamaModel,
+						Histories: make([]plugins.Message, 0),
+						OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+						Protocol:  tracer.HTTP,
+						Host:      beelzebubServiceConfiguration.Plugin.Host,
+						Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
+						Provider:  llmProvider,
 					}
 
 					llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
@@ -125,8 +124,8 @@ func traceRequest(request *http.Request, tr tracer.Tracer, HoneypotDescription s
 		request.Body = io.NopCloser(strings.NewReader(body))
 
 	}
-	src_ip, src_port, _ := net.SplitHostPort(request.RemoteAddr)
-	_, dest_port, _ := net.SplitHostPort(HoneypotAddress)
+	srcIP, srcPort, _ := net.SplitHostPort(request.RemoteAddr)
+	_, destPort, _ := net.SplitHostPort(HoneypotAddress)
 
 	log.WithFields(log.Fields{
 		"message":         "HTTP New request",
@@ -139,9 +138,9 @@ func traceRequest(request *http.Request, tr tracer.Tracer, HoneypotDescription s
 		"request_cookies": mapCookiesToString(request.Cookies()),
 		"request_headers": mapHeaderToString(request.Header),
 		"status":          tracer.Stateless.String(),
-		"src_ip":          src_ip,
-		"src_port":        src_port,
-		"dest_port":       dest_port,
+		"src_ip":          srcIP,
+		"src_port":        srcPort,
+		"dest_port":       destPort,
 		"session":         uuid.New().String(),
 		"service":         HoneypotDescription,
 	}).Info("HTTP New request")
