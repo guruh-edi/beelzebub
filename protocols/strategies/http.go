@@ -53,7 +53,7 @@ func (httpStrategy HTTPStrategy) Init(beelzebubServiceConfiguration parser.Beelz
 
 				if command.Plugin == plugins.LLMPluginName {
 
-					llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMModel)
+					llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMProvider)
 					if err != nil {
 						log.Errorf("Error fromString: %s", err.Error())
 						responseHTTPBody = "404 Not Found!"

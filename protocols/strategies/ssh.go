@@ -74,7 +74,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							if command.Plugin == plugins.LLMPluginName {
 
-								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMModel)
+								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMProvider)
 								if err != nil {
 									log.Errorf("Error fromString: %s", err.Error())
 									commandOutput = "command not found"
@@ -171,7 +171,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							if command.Plugin == plugins.LLMPluginName {
 
-								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMModel)
+								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMProvider)
 								if err != nil {
 									log.Errorf("Error fromString: %s", err.Error())
 									commandOutput = "command not found"
