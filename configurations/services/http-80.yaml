@@ -21,7 +21,7 @@ commands:
     plugin: "LLMHoneypot"
     statusCode: 200
 plugin:
-  llmModel: ${LLM_MODEL}
+  llmProvider: ${LLM_MODEL}
+  llmModel: ${OLLAMA_MODEL}
   host: ${LLM_HOST}
-  ollamaModel: ${OLLAMA_MODEL}
   openAISecretKey: ${OPEN_AI_SECRET_KEY}
