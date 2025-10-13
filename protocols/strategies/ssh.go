@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -18,12 +19,187 @@ import (
 	"github.com/mariocandela/beelzebub/v3/parser"
 	"github.com/mariocandela/beelzebub/v3/plugins"
 	"github.com/mariocandela/beelzebub/v3/tracer"
+	"github.com/pkg/sftp"
 	log "github.com/sirupsen/logrus"
 	gossh "golang.org/x/crypto/ssh"
 	"golang.org/x/term"
 )
 
 type SSHStrategy struct{}
+
+type LLMInterceptedSFTPServer struct {
+	*sftp.RequestServer
+}
+
+// LoggingFileSystem wraps the default filesystem with logging
+type LoggingFileSystem struct {
+	root string
+}
+
+// Fileread implements FileReader interface
+func (fs *LoggingFileSystem) Fileread(r *sftp.Request) (io.ReaderAt, error) {
+	log.Printf("READ: %s (flags: %v)", r.Filepath, r.Flags)
+
+	// Perform the actual operation
+	file, err := os.Open(r.Filepath)
+	if err != nil {
+		log.Printf("READ ERROR: %s - %v", r.Filepath, err)
+		return nil, err
+	}
+
+	return file, nil
+}
+
+// Filewrite implements FileWriter interface
+func (fs *LoggingFileSystem) Filewrite(r *sftp.Request) (io.WriterAt, error) {
+	log.Printf("WRITE: %s (flags: %v)", r.Filepath, r.Flags)
+
+	file, err := os.OpenFile(r.Filepath, int(r.Flags), 0644)
+	if err != nil {
+		log.Printf("WRITE ERROR: %s - %v", r.Filepath, err)
+		return nil, err
+	}
+
+	return file, nil
+}
+
+// Filecmd implements FileCmder interface
+func (fs *LoggingFileSystem) Filecmd(r *sftp.Request) error {
+	log.Printf("COMMAND: %s on %s (target: %s)", r.Method, r.Filepath, r.Target)
+
+	switch r.Method {
+	case "Remove":
+		err := os.Remove(r.Filepath)
+		if err != nil {
+			log.Printf("REMOVE ERROR: %s - %v", r.Filepath, err)
+		}
+		return err
+
+	case "Rename":
+		err := os.Rename(r.Filepath, r.Target)
+		if err != nil {
+			log.Printf("RENAME ERROR: %s -> %s - %v", r.Filepath, r.Target, err)
+		}
+		return err
+
+	case "Mkdir":
+		err := os.Mkdir(r.Filepath, 0755)
+		if err != nil {
+			log.Printf("MKDIR ERROR: %s - %v", r.Filepath, err)
+		}
+		return err
+
+	case "Rmdir":
+		err := os.Remove(r.Filepath)
+		if err != nil {
+			log.Printf("RMDIR ERROR: %s - %v", r.Filepath, err)
+		}
+		return err
+	}
+
+	return sftp.ErrSSHFxOpUnsupported
+}
+
+// Filelist implements FileLister interface
+func (fs *LoggingFileSystem) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
+	log.Printf("LIST: %s", r.Filepath)
+
+	switch r.Method {
+	case "List":
+		dir, err := os.Open(r.Filepath)
+		if err != nil {
+			log.Printf("LIST ERROR: %s - %v", r.Filepath, err)
+			return nil, err
+		}
+		return dirLister{dir}, nil
+
+	case "Stat":
+		fi, err := os.Stat(r.Filepath)
+		if err != nil {
+			log.Printf("STAT ERROR: %s - %v", r.Filepath, err)
+			return nil, err
+		}
+		return listerat{fi}, nil
+
+	case "Readlink":
+		target, err := os.Readlink(r.Filepath)
+		if err != nil {
+			log.Printf("READLINK ERROR: %s - %v", r.Filepath, err)
+			return nil, err
+		}
+		fi, _ := os.Stat(target)
+		return listerat{fi}, nil
+	}
+
+	return nil, sftp.ErrSSHFxOpUnsupported
+}
+
+// Helper types for directory listing
+type dirLister struct {
+	*os.File
+}
+
+func (d dirLister) ListAt(f []os.FileInfo, offset int64) (int, error) {
+	entries, err := d.Readdir(0)
+	if err != nil {
+		return 0, err
+	}
+
+	if offset >= int64(len(entries)) {
+		return 0, io.EOF
+	}
+
+	n := copy(f, entries[offset:])
+	if n < len(f) {
+		return n, io.EOF
+	}
+	return n, nil
+}
+
+type listerat struct {
+	os.FileInfo
+}
+
+func (l listerat) ListAt(f []os.FileInfo, offset int64) (int, error) {
+	if offset > 0 {
+		return 0, io.EOF
+	}
+	f[0] = l.FileInfo
+	return 1, io.EOF
+}
+
+func NewLLMInterceptedSFTPServer(rwc io.ReadWriteCloser, options ...sftp.ServerOption) (*LLMInterceptedSFTPServer, error) {
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
+	rt := filepath.Join(exPath, "mt")
+
+	handlers := sftp.Handlers{
+		FileGet:  &LoggingFileSystem{root: rt},
+		FilePut:  &LoggingFileSystem{root: rt},
+		FileCmd:  &LoggingFileSystem{root: rt},
+		FileList: &LoggingFileSystem{root: rt},
+	}
+	s := sftp.NewRequestServer(rwc, handlers)
+	server := &LLMInterceptedSFTPServer{
+		s,
+	}
+
+	return server, nil
+}
+
+var sshBanner string = `Welcome to Ubuntu 24.04.3 LTS (GNU/Linux 6.8.0-85-generic aarch64)
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+This system has been minimized by removing packages and content that are
+not required on a system that users do not log into.
+
+To restore this content, you can run the 'unminimize' command.
+Last login: Mon Oct 13 00:56:37 2025 from 10.0.2.2`
 
 func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.BeelzebubServiceConfiguration, tr tracer.Tracer) error {
 	file, err := os.OpenFile("./configurations/log/beelzebub.json", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0770)
@@ -51,6 +227,10 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 			MaxTimeout:  time.Duration(beelzebubServiceConfiguration.DeadlineTimeoutSeconds) * time.Second,
 			IdleTimeout: time.Duration(beelzebubServiceConfiguration.DeadlineTimeoutSeconds) * time.Second,
 			Version:     beelzebubServiceConfiguration.ServerVersion,
+			SubsystemHandlers: map[string]ssh.SubsystemHandler{
+				"sftp": sftpSubSysHandler,
+			},
+			Banner: sshBanner,
 			Handler: func(sess ssh.Session) {
 				sessionStart := time.Now()
 				uuidSession := uuid.New()
@@ -307,4 +487,25 @@ func loadOrGenerateHostKey(path string) (ssh.Signer, error) {
 
 func buildPrompt(user string, serverName string) string {
 	return fmt.Sprintf("%s@%s:~$ ", user, serverName)
+}
+
+func sftpSubSysHandler(s ssh.Session) {
+	debugStream := io.Discard
+	serverOptions := []sftp.ServerOption{
+		sftp.WithDebug(debugStream),
+	}
+	server, err := NewLLMInterceptedSFTPServer(
+		s,
+		serverOptions...,
+	)
+	if err != nil {
+		log.Printf("sftp server init error: %s\n", err)
+		return
+	}
+	if err := server.Serve(); err == io.EOF {
+		server.Close()
+		fmt.Println("sftp client exited session.")
+	} else if err != nil {
+		fmt.Println("sftp server completed with error:", err)
+	}
 }
