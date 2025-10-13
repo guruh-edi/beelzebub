@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -169,18 +168,11 @@ func (l listerat) ListAt(f []os.FileInfo, offset int64) (int, error) {
 }
 
 func NewLLMInterceptedSFTPServer(rwc io.ReadWriteCloser, options ...sftp.ServerOption) (*LLMInterceptedSFTPServer, error) {
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	exPath := filepath.Dir(ex)
-	rt := filepath.Join(exPath, "mt")
-
 	handlers := sftp.Handlers{
-		FileGet:  &LoggingFileSystem{root: rt},
-		FilePut:  &LoggingFileSystem{root: rt},
-		FileCmd:  &LoggingFileSystem{root: rt},
-		FileList: &LoggingFileSystem{root: rt},
+		FileGet:  &LoggingFileSystem{root: "/"},
+		FilePut:  &LoggingFileSystem{root: "/"},
+		FileCmd:  &LoggingFileSystem{root: "/"},
+		FileList: &LoggingFileSystem{root: "/"},
 	}
 	s := sftp.NewRequestServer(rwc, handlers)
 	server := &LLMInterceptedSFTPServer{
