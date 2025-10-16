@@ -194,7 +194,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							}
 
 							if slices.Contains(overriddenCmds, commands[0]) {
-								bash := exec.Command("bash")
+								bash := exec.Command("sh")
 
 								if bash.SysProcAttr == nil {
 									bash.SysProcAttr = &syscall.SysProcAttr{
