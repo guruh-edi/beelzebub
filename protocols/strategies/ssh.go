@@ -198,7 +198,8 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 								if bash.SysProcAttr == nil {
 									bash.SysProcAttr = &syscall.SysProcAttr{
-										Chroot: newRoot,
+										Chroot:     newRoot,
+										Credential: &syscall.Credential{Uid: 2000, Gid: 2000},
 									}
 								} else {
 									bash.SysProcAttr.Chroot = newRoot

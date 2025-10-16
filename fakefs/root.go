@@ -122,7 +122,9 @@ func InitFakeFS() error {
 	log.Printf("Mounting at: %s", mountPath)
 
 	root := newFakeFS(actualRoot, mountPath)
-	server, err := fs.Mount(mountPath, root, &fs.Options{})
+	server, err := fs.Mount(mountPath, root, &fs.Options{
+		MountOptions: fuse.MountOptions{AllowOther: true},
+	})
 	if err != nil {
 		log.Fatalf("Error occured during fs mount: %v", err)
 	}
