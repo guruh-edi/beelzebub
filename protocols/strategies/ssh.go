@@ -70,6 +70,8 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				sessionStart := time.Now()
 				uuidSession := uuid.New()
 
+				newRoot := "opt/honeypot/mnt"
+
 				srcIP, srcPort, _ := net.SplitHostPort(sess.RemoteAddr().String())
 				_, destPort, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
 				clientVersion := sess.Context().ClientVersion()
@@ -192,6 +194,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							if slices.Contains(overriddenCmds, commands[0]) {
 								bash := exec.Command("bash")
+								bash.SysProcAttr.Chroot = newRoot
 								bash.Stdin = strings.NewReader(commandInput)
 
 								output, err := bash.Output()
