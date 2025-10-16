@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gliderlabs/ssh"
@@ -194,7 +195,14 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 							if slices.Contains(overriddenCmds, commands[0]) {
 								bash := exec.Command("bash")
-								bash.SysProcAttr.Chroot = newRoot
+
+								if bash.SysProcAttr == nil {
+									bash.SysProcAttr = &syscall.SysProcAttr{
+										Chroot: newRoot,
+									}
+								} else {
+									bash.SysProcAttr.Chroot = newRoot
+								}
 								bash.Stdin = strings.NewReader(commandInput)
 
 								output, err := bash.Output()
