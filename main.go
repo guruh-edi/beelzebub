@@ -5,7 +5,6 @@ import (
 	"runtime/debug"
 
 	"github.com/mariocandela/beelzebub/v3/builder"
-	"github.com/mariocandela/beelzebub/v3/fakefs"
 	"github.com/mariocandela/beelzebub/v3/parser"
 
 	log "github.com/sirupsen/logrus"
@@ -38,8 +37,8 @@ func main() {
 	beelzebubServicesConfiguration, err := parser.ReadConfigurationsServices()
 	failOnError(err, "Error during ReadConfigurationsServices: ")
 
-	err = fakefs.InitFakeFS()
-	failOnError(err, "Error mounting directory: ")
+	// err = fakefs.InitFakeFS()
+	// failOnError(err, "Error mounting directory: ")
 
 	beelzebubBuilder := builder.NewBuilder()
 
