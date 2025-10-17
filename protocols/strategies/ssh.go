@@ -73,11 +73,10 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				uuidSession := uuid.New()
 
 				wd, _ := os.Getwd()
-				dirents, err := os.ReadDir(wd)
+				mntPath := filepath.Join(wd, "mnt")
+				dirents, err := os.ReadDir(mntPath)
 				if err != nil {
 					log.Error("failed to get dir")
-				} else {
-					log.Printf("Current dir: %s", wd)
 				}
 				for _, d := range dirents {
 					log.Println(d.Name())
@@ -86,7 +85,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 						dPath := filepath.Join(wd, d.Name())
 						dd, _ := os.ReadDir(dPath)
 						if len(dd) > 0 {
-							log.Println(dd[0].Name())
+							log.Println("subdir", dd[0].Name())
 						} else {
 							log.Println("empty subdir")
 						}
