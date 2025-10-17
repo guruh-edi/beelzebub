@@ -71,7 +71,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				sessionStart := time.Now()
 				uuidSession := uuid.New()
 
-				newRoot := "mnt"
+				newRoot := "/opt/beelzebub/mnt"
 
 				srcIP, srcPort, _ := net.SplitHostPort(sess.RemoteAddr().String())
 				_, destPort, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
