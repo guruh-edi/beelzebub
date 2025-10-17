@@ -32,6 +32,10 @@ func newFakeFS(actualRoot string, mountPath string) *fakeFS {
 	}
 }
 
+func (ff *fakeFS) OnAdd(ctx context.Context) {
+	// no-op
+}
+
 var (
 	_ = (fs.NodeGetattrer)((*fakeFile)(nil))
 	_ = (fs.NodeReader)((*fakeFile)(nil))
