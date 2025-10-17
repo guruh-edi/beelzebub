@@ -47,6 +47,7 @@ type fakeFile struct {
 	fs.Inode
 	actualPath string
 	mu         sync.Mutex
+	fakeFS     *fakeFS
 }
 
 func (f *fakeFile) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
@@ -101,12 +102,14 @@ func (f *fakeFile) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fu
 type fakeDir struct {
 	fs.Inode
 	actualPath string
+	fakeFS     *fakeFS
 }
 
 var (
 	_ = (fs.NodeReaddirer)((*fakeDir)(nil))
 	_ = (fs.NodeLookuper)((*fakeDir)(nil))
 	_ = (fs.NodeGetattrer)((*fakeDir)(nil))
+	_ = (fs.InodeEmbedder)((*fakeFile)(nil))
 )
 
 func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
@@ -173,7 +176,12 @@ func InitFakeFS() error {
 	log.Printf("Using actual root path: %s", actualRoot)
 	log.Printf("Mounting at: %s", mountPath)
 
-	root := newFakeFS(actualRoot, mountPath)
+	fakeFS := newFakeFS(actualRoot, mountPath)
+	root := &fakeDir{
+		fakeFS:     fakeFS,
+		actualPath: actualRoot,
+	}
+
 	server, err := fs.Mount(mountPath, root, &fs.Options{
 		MountOptions: fuse.MountOptions{
 			AllowOther: true,
