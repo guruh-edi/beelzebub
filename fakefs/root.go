@@ -144,6 +144,7 @@ func (f *fakeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	child := makeNode(target, isDir)
 	inode := f.NewInode(ctx, child, fs.StableAttr{
 		Mode: uint32(info.Mode()),
+		Ino:  uint64(info.ModTime().UnixNano()),
 	})
 	return inode, 0
 }
