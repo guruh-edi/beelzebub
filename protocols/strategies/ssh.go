@@ -71,6 +71,13 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				sessionStart := time.Now()
 				uuidSession := uuid.New()
 
+				wd, err := os.Getwd()
+				if err != nil {
+					log.Error("failed to get dir")
+				} else {
+					log.Printf("Current dir: %s", wd)
+				}
+
 				newRoot := "/opt/beelzebub/mnt"
 
 				srcIP, srcPort, _ := net.SplitHostPort(sess.RemoteAddr().String())
