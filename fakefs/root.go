@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -93,25 +94,72 @@ func (f *fakeFile) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fu
 	return nil, 0, 0
 }
 
-// func (f *fakeFile) Setattr(ctx context.Context, fh fs.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
-// 	// no-op
-// 	return 0
-// }
+type fakeDir struct {
+	fs.Inode
+	actualPath string
+}
 
-// func createNode(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *fs.Inode, fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
-// 	return nil, nil, 0, syscall.ENOENT
-// }
+var (
+	_ = (fs.NodeReaddirer)((*fakeDir)(nil))
+	_ = (fs.NodeLookuper)((*fakeDir)(nil))
+	_ = (fs.NodeGetattrer)((*fakeDir)(nil))
+)
 
-// _ = (fs.NodeLookuper)((*fakeNode)(nil))
-// _ = (fs.NodeOnAdder)((*fakeNode)(nil))
+func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	dirs, err := os.ReadDir(f.actualPath)
+	if err != nil {
+		return nil, syscall.ENOENT
+	}
 
-// func (n *fakeNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-// 	ops := fakeNode{}
-// 	return n.NewInode(ctx, &ops, fs.StableAttr{Mode: syscall.S_IFREG}), 0
-// }
-//
-// func (n *fakeNode) OnAdd(ctx context.Context) {
-// }
+	var dirList []fuse.DirEntry
+	for _, d := range dirs {
+		var mode uint32
+		if d.IsDir() {
+			mode = uint32(d.Type().Type())
+		}
+		dirList = append(dirList, fuse.DirEntry{
+			Name: d.Name(),
+			Mode: mode,
+		})
+	}
+
+	return fs.NewListDirStream(dirList), 0
+}
+
+func (f *fakeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	target := filepath.Join(f.actualPath, name)
+	info, err := os.Lstat(target)
+	if err != nil {
+		return nil, syscall.ENOENT
+	}
+	isDir := info.IsDir()
+	child := makeNode(target, isDir)
+	inode := f.NewInode(ctx, child, fs.StableAttr{
+		Mode: uint32(info.Mode()),
+	})
+	return inode, 0
+}
+
+func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	info, err := os.Lstat(f.actualPath)
+	if err != nil {
+		return syscall.ENOENT
+	}
+
+	out.Mode = uint32(info.Mode())
+	out.Size = uint64(info.Size())
+
+	modTime := info.ModTime()
+	out.SetTimes(&modTime, &modTime, &modTime)
+	return 0
+}
+
+func makeNode(childPath string, isDir bool) fs.InodeEmbedder {
+	if isDir {
+		return &fakeDir{actualPath: childPath}
+	}
+	return &fakeFile{actualPath: childPath}
+}
 
 func InitFakeFS() error {
 	flag.StringVar(&actualRoot, "actual", "/opt/honeypot/actual-root", "Actual root directory")
