@@ -120,14 +120,15 @@ func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 	var dirList []fuse.DirEntry
 	for _, d := range dirs {
-		log.Printf("real dirname: %s\n", d.Name())
-		var mode uint32
-		if d.IsDir() {
-			mode = uint32(d.Type().Type())
+		target := filepath.Join(f.actualPath, d.Name())
+		info, err := os.Lstat(target)
+		if err != nil {
+			continue
 		}
+
 		dirList = append(dirList, fuse.DirEntry{
 			Name: d.Name(),
-			Mode: mode,
+			Mode: uint32(info.Mode()),
 		})
 	}
 
