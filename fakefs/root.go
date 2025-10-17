@@ -117,6 +117,7 @@ func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 	var dirList []fuse.DirEntry
 	for _, d := range dirs {
+		log.Printf("real dirname: %s\n", d.Name())
 		var mode uint32
 		if d.IsDir() {
 			mode = uint32(d.Type().Type())
