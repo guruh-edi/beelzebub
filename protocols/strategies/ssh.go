@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -71,11 +72,26 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 				sessionStart := time.Now()
 				uuidSession := uuid.New()
 
-				wd, err := os.Getwd()
+				wd, _ := os.Getwd()
+				dirents, err := os.ReadDir(wd)
 				if err != nil {
 					log.Error("failed to get dir")
 				} else {
 					log.Printf("Current dir: %s", wd)
+				}
+				for _, d := range dirents {
+					log.Println(d.Name())
+
+					if d.IsDir() {
+						dPath := filepath.Join(wd, d.Name())
+						dd, _ := os.ReadDir(dPath)
+						if len(dd) > 0 {
+							log.Println(dd[0].Name())
+						} else {
+							log.Println("empty subdir")
+						}
+					}
+
 				}
 
 				newRoot := "/opt/beelzebub/mnt"
