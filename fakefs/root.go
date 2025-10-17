@@ -50,16 +50,14 @@ type fakeFile struct {
 }
 
 func (f *fakeFile) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	// info, err := os.Lstat(f.actualPath)
-	// if err != nil {
-	// 	return syscall.ENOENT
-	// }
-
-	out.Size = 0
-	out.Mode = 0o644
+	info, err := os.Lstat(f.actualPath)
+	if err != nil {
+		return syscall.ENOENT
+	}
+	out.Attr.Mode = uint32(info.Mode())
+	out.Attr.Size = uint64(info.Size())
+	modTime := info.ModTime()
+	out.SetTimes(&modTime, &modTime, &modTime)
 
 	return 0
 }
@@ -68,30 +66,32 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
+	var r []byte = make([]byte, 512)
+
 	file, err := os.Open(f.actualPath)
 	if err != nil {
 		errno, ok := err.(syscall.Errno)
 		if ok {
-			return fuse.ReadResultData(dest), errno
+			return fuse.ReadResultData(r), errno
 		}
-		return fuse.ReadResultData(dest), syscall.ENOENT
+		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 
 	_, err = file.Seek(off, io.SeekStart)
 	if err != nil {
-		return fuse.ReadResultData(dest), syscall.ENOENT
+		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 
-	_, err = file.Read(dest)
+	_, err = file.Read(r)
 	if err != nil {
 		errno, ok := err.(syscall.Errno)
 		if ok {
-			return fuse.ReadResultData(dest), errno
+			return fuse.ReadResultData(r), errno
 		}
-		return fuse.ReadResultData(dest), syscall.ENOENT
+		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 
-	return fuse.ReadResultData(dest), 0
+	return fuse.ReadResultData(r), 0
 }
 
 func (f *fakeFile) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
@@ -150,12 +150,11 @@ func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrO
 	if err != nil {
 		return syscall.ENOENT
 	}
-
-	out.Mode = uint32(info.Mode())
-	out.Size = uint64(info.Size())
-
+	out.Attr.Mode = uint32(info.Mode())
+	out.Attr.Size = uint64(info.Size())
 	modTime := info.ModTime()
 	out.SetTimes(&modTime, &modTime, &modTime)
+
 	return 0
 }
 
