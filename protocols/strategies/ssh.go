@@ -229,6 +229,11 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 									}
 								} else {
 									bash.SysProcAttr.Chroot = newRoot
+									bash.SysProcAttr.Credential = &syscall.Credential{
+										Uid:         2000,
+										Gid:         2000,
+										NoSetGroups: true,
+									}
 								}
 								// bash.Stdin = strings.NewReader(commandInput)
 
