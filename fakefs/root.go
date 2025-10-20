@@ -82,6 +82,7 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 	if err != nil {
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
+	log.Println("actual path: " + f.actualPath)
 
 	if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
 		f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" {
