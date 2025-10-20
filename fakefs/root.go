@@ -83,7 +83,8 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 
-	if f.actualPath == "creds.txt" {
+	if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
+		f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" {
 		return fuse.ReadResultData([]byte("not secret")), 0
 	}
 
