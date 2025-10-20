@@ -212,6 +212,8 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							overriddenCmds := []string{
 								"echo",
 								"cat",
+								"ls",
+								"pwd",
 							}
 
 							if slices.Contains(overriddenCmds, commands[0]) {
