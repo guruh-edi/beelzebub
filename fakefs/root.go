@@ -83,6 +83,10 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 
+	if f.actualPath == "creds.txt" {
+		return fuse.ReadResultData([]byte("not secret")), 0
+	}
+
 	_, err = file.Read(r)
 	if err != nil {
 		errno, ok := err.(syscall.Errno)
