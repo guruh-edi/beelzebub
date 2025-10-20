@@ -14,7 +14,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gliderlabs/ssh"
@@ -93,7 +92,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 
 				}
 
-				newRoot := "/opt/beelzebub/mnt"
+				// newRoot := "/opt/beelzebub/mnt"
 
 				srcIP, srcPort, _ := net.SplitHostPort(sess.RemoteAddr().String())
 				_, destPort, _ := net.SplitHostPort(beelzebubServiceConfiguration.Address)
@@ -218,23 +217,23 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							if slices.Contains(overriddenCmds, commands[0]) {
 								bash := exec.Command("bash", "-c", commandInput)
 
-								if bash.SysProcAttr == nil {
-									bash.SysProcAttr = &syscall.SysProcAttr{
-										Chroot: newRoot,
-										Credential: &syscall.Credential{
-											Uid:         2000,
-											Gid:         2000,
-											NoSetGroups: true,
-										},
-									}
-								} else {
-									bash.SysProcAttr.Chroot = newRoot
-									bash.SysProcAttr.Credential = &syscall.Credential{
-										Uid:         2000,
-										Gid:         2000,
-										NoSetGroups: true,
-									}
-								}
+								// if bash.SysProcAttr == nil {
+								// 	bash.SysProcAttr = &syscall.SysProcAttr{
+								// 		Chroot: newRoot,
+								// 		Credential: &syscall.Credential{
+								// 			Uid:         2000,
+								// 			Gid:         2000,
+								// 			NoSetGroups: true,
+								// 		},
+								// 	}
+								// } else {
+								// 	bash.SysProcAttr.Chroot = newRoot
+								// 	bash.SysProcAttr.Credential = &syscall.Credential{
+								// 		Uid:         2000,
+								// 		Gid:         2000,
+								// 		NoSetGroups: true,
+								// 	}
+								// }
 								// bash.Stdin = strings.NewReader(commandInput)
 
 								output, err := bash.Output()
