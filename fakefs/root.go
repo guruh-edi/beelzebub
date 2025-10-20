@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"syscall"
 
@@ -86,9 +87,12 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 	log.Println("actual path: " + f.actualPath)
 	log.Println("inode path: " + f.Path(nil))
 
-	if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
-		f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" ||
-		f.actualPath == "/home/ediguruh/beelzebub/actual-fs/creds.txt" {
+	overriddenFiles := []string{
+		"creds.txt",
+		"/etc/credentials/creds.txt",
+	}
+
+	if slices.Contains(overriddenFiles, f.Path(nil)) {
 		return fuse.ReadResultData([]byte("not secret")), 0
 	}
 
