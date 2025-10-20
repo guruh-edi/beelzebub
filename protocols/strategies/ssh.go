@@ -217,7 +217,8 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							}
 
 							if slices.Contains(overriddenCmds, commands[0]) {
-								bash := exec.Command("bash", "-c", commandInput)
+								prepended := "cd /opt/beelzebub && " + commandInput
+								bash := exec.Command("bash", "-c", prepended)
 
 								// if bash.SysProcAttr == nil {
 								// 	bash.SysProcAttr = &syscall.SysProcAttr{
