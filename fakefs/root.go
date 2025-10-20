@@ -23,6 +23,7 @@ type fakeFS struct {
 	fs.Inode
 	actualRoot string
 	mountPath  string
+	root       *fs.Inode
 }
 
 func newFakeFS(actualRoot string, mountPath string) *fakeFS {
@@ -83,6 +84,7 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 	log.Println("actual path: " + f.actualPath)
+	log.Println("inode path: " + f.Path(nil))
 
 	if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
 		f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" ||
