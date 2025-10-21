@@ -211,8 +211,8 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							commands := strings.Fields(commandInput)
 							overriddenCmds := []string{
 								"echo",
-								// "cat",
-								// "ls",
+								"cat",
+								"ls",
 								"pwd",
 							}
 
