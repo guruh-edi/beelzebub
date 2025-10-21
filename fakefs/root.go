@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"syscall"
 
@@ -84,7 +85,18 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 	log.Println("actual path: " + f.actualPath)
-	log.Println("inode path: " + f.Path(nil))
+	log.Println("inode path: " + f.Path(f.fakeFS.root))
+
+	whitelists := []string{
+		"mnt/creds.txt",
+		"mnt/etc/creds.txt",
+	}
+
+	inodePath := f.Path(f.fakeFS.root)
+
+	if slices.Contains(whitelists, inodePath) {
+		log.Printf("found: %s\n", inodePath)
+	}
 
 	if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
 		f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" ||
