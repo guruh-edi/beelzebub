@@ -24,7 +24,7 @@ type fakeFS struct {
 	fs.Inode
 	actualRoot string
 	mountPath  string
-	root       *fs.Inode
+	root       *fakeDir
 }
 
 func newFakeFS(actualRoot string, mountPath string) *fakeFS {
@@ -85,14 +85,14 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 	log.Println("actual path: " + f.actualPath)
-	log.Println("inode path: " + f.Path(f.fakeFS.root))
+	log.Println("inode path: " + f.Path(&f.fakeFS.root.Inode))
 
 	whitelists := []string{
 		"mnt/creds.txt",
 		"mnt/etc/creds.txt",
 	}
 
-	inodePath := f.Path(f.fakeFS.root)
+	inodePath := f.Path(&f.fakeFS.root.Inode)
 
 	if slices.Contains(whitelists, inodePath) {
 		log.Printf("found: %s\n", inodePath)
@@ -163,7 +163,7 @@ func (f *fakeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		return nil, syscall.ENOENT
 	}
 	isDir := info.IsDir()
-	child := makeNode(target, isDir)
+	child := f.fakeFS.makeNode(target, isDir)
 	inode := f.NewInode(ctx, child, fs.StableAttr{
 		Mode: uint32(info.Mode()),
 		Ino:  uint64(info.ModTime().UnixNano()),
@@ -184,11 +184,11 @@ func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrO
 	return 0
 }
 
-func makeNode(childPath string, isDir bool) fs.InodeEmbedder {
+func (fs *fakeFS) makeNode(childPath string, isDir bool) fs.InodeEmbedder {
 	if isDir {
-		return &fakeDir{actualPath: childPath}
+		return &fakeDir{actualPath: childPath, fakeFS: fs}
 	}
-	return &fakeFile{actualPath: childPath}
+	return &fakeFile{actualPath: childPath, fakeFS: fs}
 }
 
 func InitFakeFS() error {
