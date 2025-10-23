@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -107,7 +108,8 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 	}
 
 	for _, w := range whitelist {
-		match, err := filepath.Match(w, f.actualPath)
+		base := strings.TrimPrefix(f.mountedPath, mountPath)
+		match, err := filepath.Match(w, base)
 		log.Printf("w: %s, %t, %s, %s", w, match, f.actualPath, f.mountedPath)
 		if err != nil {
 			log.Printf("error matching file pattern: %s", err.Error())
