@@ -20,6 +20,27 @@ var (
 	mountPath  string
 )
 
+var whitelist = []string{
+	"/etc/shadow",
+	"/etc/gshadow",
+	"/etc/passwd",
+	"/etc/group",
+	"/root/.ssh/",
+	"/home/*/.ssh/",
+	"/etc/ssh/ssh_host_*_key",
+	"/etc/sudoers",
+	"/etc/sudoers.d/",
+	"/etc/security/",
+	"/boot/",
+	"/etc/fstab",
+	"/tmp/",
+	"/var/tmp",
+	"/var/log/",
+	"/var/log/auth.log",
+	"/var/log/secure",
+	"/etc/ssl/private/",
+}
+
 type fakeFS struct {
 	fs.Inode
 	actualRoot string
@@ -57,8 +78,8 @@ func (f *fakeFile) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.Attr
 	if err != nil {
 		return syscall.ENOENT
 	}
-	out.Attr.Mode = uint32(info.Mode())
-	out.Attr.Size = uint64(info.Size())
+	out.Mode = uint32(info.Mode())
+	out.Size = uint64(info.Size())
 	modTime := info.ModTime()
 	out.SetTimes(&modTime, &modTime, &modTime)
 
@@ -69,7 +90,7 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	var r []byte = make([]byte, 512)
+	r := make([]byte, 512)
 
 	file, err := os.Open(f.actualPath)
 	if err != nil {
@@ -86,15 +107,11 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 	}
 	log.Println("actual path: " + f.actualPath)
 	log.Println("inode path: " + f.Path(&f.fakeFS.root.Inode))
-
-	whitelists := []string{
-		"mnt/creds.txt",
-		"mnt/etc/creds.txt",
-	}
+	log.Println("inode path2: " + f.Path(&f.Inode))
 
 	inodePath := f.Path(&f.fakeFS.root.Inode)
 
-	if slices.Contains(whitelists, inodePath) {
+	if slices.Contains(whitelist, inodePath) {
 		log.Printf("found: %s\n", inodePath)
 	}
 
@@ -130,7 +147,7 @@ var (
 	_ = (fs.NodeReaddirer)((*fakeDir)(nil))
 	_ = (fs.NodeLookuper)((*fakeDir)(nil))
 	_ = (fs.NodeGetattrer)((*fakeDir)(nil))
-	_ = (fs.InodeEmbedder)((*fakeFile)(nil))
+	_ = (fs.InodeEmbedder)((*fakeDir)(nil))
 )
 
 func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
@@ -176,19 +193,22 @@ func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrO
 	if err != nil {
 		return syscall.ENOENT
 	}
-	out.Attr.Mode = uint32(info.Mode())
-	out.Attr.Size = uint64(info.Size())
+	out.Mode = uint32(info.Mode())
+	out.Size = uint64(info.Size())
 	modTime := info.ModTime()
 	out.SetTimes(&modTime, &modTime, &modTime)
 
 	return 0
 }
 
-func (fs *fakeFS) makeNode(childPath string, isDir bool) fs.InodeEmbedder {
+func (ff *fakeFS) makeNode(childPath string, isDir bool) fs.InodeEmbedder {
+	var node fs.InodeEmbedder
 	if isDir {
-		return &fakeDir{actualPath: childPath, fakeFS: fs}
+		node = &fakeDir{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
 	}
-	return &fakeFile{actualPath: childPath, fakeFS: fs}
+	node = &fakeFile{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
+
+	return node
 }
 
 func InitFakeFS() error {
