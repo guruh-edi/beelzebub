@@ -106,7 +106,7 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 	log.Println("actual path: " + f.actualPath)
-	log.Println("inode path: " + f.Path(&f.fakeFS.root.Inode))
+	// log.Println("inode path: " + f.Path(&f.fakeFS.root.Inode))
 	log.Println("inode path2: " + f.Path(&f.Inode))
 
 	inodePath := f.Path(&f.fakeFS.root.Inode)
@@ -180,12 +180,8 @@ func (f *fakeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		return nil, syscall.ENOENT
 	}
 	isDir := info.IsDir()
-	child := f.fakeFS.makeNode(target, isDir)
-	inode := f.NewInode(ctx, child, fs.StableAttr{
-		Mode: uint32(info.Mode()),
-		Ino:  uint64(info.ModTime().UnixNano()),
-	})
-	return inode, 0
+	child := f.fakeFS.makeNode(target, isDir, info)
+	return child.EmbeddedInode(), 0
 }
 
 func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
@@ -201,14 +197,21 @@ func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrO
 	return 0
 }
 
-func (ff *fakeFS) makeNode(childPath string, isDir bool) fs.InodeEmbedder {
-	var node fs.InodeEmbedder
+func (ff *fakeFS) makeNode(childPath string, isDir bool, fileInfo os.FileInfo) fs.InodeEmbedder {
 	if isDir {
-		node = &fakeDir{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
+		dir := &fakeDir{actualPath: childPath, fakeFS: ff}
+		inode := dir.NewInode(context.TODO(), dir, fs.StableAttr{
+			Mode: uint32(fileInfo.Mode()),
+			Ino:  uint64(fileInfo.ModTime().UnixNano()),
+		})
+		return inode
 	}
-	node = &fakeFile{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
-
-	return node
+	file := &fakeFile{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
+	inode := file.NewInode(context.TODO(), file, fs.StableAttr{
+		Mode: uint32(fileInfo.Mode()),
+		Ino:  uint64(fileInfo.ModTime().UnixNano()),
+	})
+	return inode
 }
 
 func InitFakeFS() error {
