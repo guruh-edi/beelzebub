@@ -67,9 +67,10 @@ var (
 
 type fakeFile struct {
 	fs.Inode
-	actualPath string
-	mu         sync.Mutex
-	fakeFS     *fakeFS
+	actualPath  string
+	mountedPath string
+	mu          sync.Mutex
+	fakeFS      *fakeFS
 }
 
 func (f *fakeFile) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
@@ -105,13 +106,23 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 		return fuse.ReadResultData(r), syscall.ENOENT
 	}
 
-	log.Printf("dest: %s", string(dest))
+	for _, w := range whitelist {
+		match, err := filepath.Match(w, f.actualPath)
+		if err != nil {
+			log.Printf("error matching file pattern: %s", err.Error())
+			continue
+		}
 
-	if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
-		f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" ||
-		f.actualPath == "/home/ediguruh/beelzebub/actual-fs/creds.txt" {
-		return fuse.ReadResultData([]byte("not secret")), 0
+		if match {
+			return fuse.ReadResultData([]byte("not secret")), 0
+		}
 	}
+
+	// if f.actualPath == "/opt/beelzebub/mnt/creds.txt" ||
+	// 	f.actualPath == "/opt/beelzebub/mnt/etc/creds.txt" ||
+	// 	f.actualPath == "/home/ediguruh/beelzebub/actual-fs/creds.txt" {
+	// 	return fuse.ReadResultData([]byte("not secret")), 0
+	// }
 
 	_, err = file.Read(r)
 	if err != nil {
@@ -172,7 +183,7 @@ func (f *fakeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		return nil, syscall.ENOENT
 	}
 	isDir := info.IsDir()
-	child := f.fakeFS.makeNode(target, isDir)
+	child := f.fakeFS.makeNode(name, isDir)
 	inode := f.NewInode(ctx, child, fs.StableAttr{
 		Mode: uint32(info.Mode()),
 		Ino:  uint64(info.ModTime().UnixNano()),
@@ -196,9 +207,13 @@ func (f *fakeDir) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrO
 func (ff *fakeFS) makeNode(childPath string, isDir bool) fs.InodeEmbedder {
 	var node fs.InodeEmbedder
 	if isDir {
-		node = &fakeDir{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
+		node = &fakeDir{actualPath: childPath, fakeFS: ff}
+
+		return node
 	}
-	node = &fakeFile{actualPath: childPath, fakeFS: ff, Inode: fs.Inode{}}
+	mountedPath := filepath.Join(mountPath, childPath)
+	actualPath := filepath.Join(actualRoot, childPath)
+	node = &fakeFile{actualPath: actualPath, mountedPath: mountedPath, fakeFS: ff}
 
 	return node
 }
