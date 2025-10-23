@@ -81,7 +81,7 @@ func (f *fakeFile) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.Attr
 	out.Mode = uint32(info.Mode())
 	out.Size = uint64(info.Size())
 	modTime := info.ModTime()
-	out.SetTimes(&modTime, &modTime, &modTime)
+	out.SetTimes(nil, &modTime, nil)
 
 	return 0
 }
@@ -108,6 +108,7 @@ func (f *fakeFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off 
 
 	for _, w := range whitelist {
 		match, err := filepath.Match(w, f.actualPath)
+		log.Printf("w: %s, %t, %s, %s", w, match, f.actualPath, f.mountedPath)
 		if err != nil {
 			log.Printf("error matching file pattern: %s", err.Error())
 			continue
@@ -225,6 +226,15 @@ func InitFakeFS() error {
 
 	log.Printf("Using actual root path: %s", actualRoot)
 	log.Printf("Mounting at: %s", mountPath)
+
+	actualRoot, err := filepath.Abs(actualRoot)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mountPath, err = filepath.Abs(mountPath)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	fakeFS := newFakeFS(actualRoot, mountPath)
 	root := &fakeDir{
