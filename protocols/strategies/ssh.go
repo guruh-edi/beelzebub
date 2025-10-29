@@ -40,6 +40,13 @@ To restore this content, you can run the 'unminimize' command.
 Last login: Mon Oct 13 00:56:37 2025 from 10.0.2.2
 `
 
+var overriddenCmds = []string{
+	"echo",
+	"cat",
+	"ls",
+	"pwd",
+}
+
 func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.BeelzebubServiceConfiguration, tr tracer.Tracer) error {
 	file, err := os.OpenFile("./configurations/log/beelzebub.json", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0770)
 	if err != nil {
@@ -209,12 +216,6 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							commandOutput := command.Handler
 
 							commands := strings.Fields(commandInput)
-							overriddenCmds := []string{
-								"echo",
-								"cat",
-								"ls",
-								"pwd",
-							}
 
 							if slices.Contains(overriddenCmds, commands[0]) {
 								prepended := "cd /opt/beelzebub && " + commandInput
@@ -243,32 +244,34 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 								if err != nil {
 									log.Errorf("Error executing command: %s", err.Error())
 									commandOutput = "command not found"
+								} else {
+									commandOutput = string(output)
+									commandOutput = strings.TrimSuffix(commandOutput, "\n")
 								}
 
-								commandOutput = string(output)
-								commandOutput = strings.TrimSuffix(commandOutput, "\n")
 							} else if command.Plugin == plugins.LLMPluginName {
 								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMProvider)
 								if err != nil {
 									log.Errorf("Error fromString: %s", err.Error())
 									commandOutput = "command not found"
+								} else {
+									llmHoneypot := plugins.LLMHoneypot{
+										Histories: histories,
+										OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+										Protocol:  tracer.SSH,
+										Host:      beelzebubServiceConfiguration.Plugin.Host,
+										Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
+										Provider:  llmProvider,
+									}
+
+									llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
+
+									if commandOutput, err = llmHoneypotInstance.ExecuteModel(commandInput); err != nil {
+										log.Errorf("Error ExecuteModel: %s, %s", commandInput, err.Error())
+										commandOutput = "command not found"
+									}
 								}
 
-								llmHoneypot := plugins.LLMHoneypot{
-									Histories: histories,
-									OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-									Protocol:  tracer.SSH,
-									Host:      beelzebubServiceConfiguration.Plugin.Host,
-									Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
-									Provider:  llmProvider,
-								}
-
-								llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
-
-								if commandOutput, err = llmHoneypotInstance.ExecuteModel(commandInput); err != nil {
-									log.Errorf("Error ExecuteModel: %s, %s", commandInput, err.Error())
-									commandOutput = "command not found"
-								}
 							}
 
 							histories = append(histories, plugins.Message{Role: plugins.USER.String(), Content: commandInput})
