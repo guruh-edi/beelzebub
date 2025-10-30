@@ -246,8 +246,9 @@ func InitFakeFS() error {
 
 	fakeFS := newFakeFS(actualRoot, mountPath)
 	root := &fakeDir{
-		fakeFS:     fakeFS,
-		actualPath: actualRoot,
+		fakeFS:      fakeFS,
+		actualPath:  actualRoot,
+		mountedPath: mountPath,
 	}
 
 	server, err := fs.Mount(mountPath, root, &fs.Options{
