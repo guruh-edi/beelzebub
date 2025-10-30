@@ -41,10 +41,10 @@ Last login: Mon Oct 13 00:56:37 2025 from 10.0.2.2
 `
 
 var overriddenCmds = []string{
-	"echo",
-	"cat",
-	"ls",
-	"pwd",
+	// "echo",
+	// "cat",
+	// "ls",
+	// "pwd",
 }
 
 func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.BeelzebubServiceConfiguration, tr tracer.Tracer) error {
