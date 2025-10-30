@@ -127,12 +127,13 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 								}
 
 								llmHoneypot := plugins.LLMHoneypot{
-									Histories: make([]plugins.Message, 0),
-									OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-									Protocol:  tracer.SSH,
-									Host:      beelzebubServiceConfiguration.Plugin.Host,
-									Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
-									Provider:  llmProvider,
+									Histories:    make([]plugins.Message, 0),
+									OpenAIKey:    beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+									Protocol:     tracer.SSH,
+									Host:         beelzebubServiceConfiguration.Plugin.Host,
+									Model:        beelzebubServiceConfiguration.Plugin.LLMModel,
+									Provider:     llmProvider,
+									CustomPrompt: beelzebubServiceConfiguration.Plugin.Prompt,
 								}
 
 								llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
@@ -256,12 +257,13 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 									commandOutput = "command not found"
 								} else {
 									llmHoneypot := plugins.LLMHoneypot{
-										Histories: histories,
-										OpenAIKey: beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-										Protocol:  tracer.SSH,
-										Host:      beelzebubServiceConfiguration.Plugin.Host,
-										Model:     beelzebubServiceConfiguration.Plugin.LLMModel,
-										Provider:  llmProvider,
+										Histories:    histories,
+										OpenAIKey:    beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+										Protocol:     tracer.SSH,
+										Host:         beelzebubServiceConfiguration.Plugin.Host,
+										Model:        beelzebubServiceConfiguration.Plugin.LLMModel,
+										Provider:     llmProvider,
+										CustomPrompt: beelzebubServiceConfiguration.Plugin.Prompt,
 									}
 
 									llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
