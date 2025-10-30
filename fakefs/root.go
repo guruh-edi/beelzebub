@@ -145,8 +145,9 @@ func (f *fakeFile) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fu
 
 type fakeDir struct {
 	fs.Inode
-	actualPath string
-	fakeFS     *fakeFS
+	actualPath  string
+	mountedPath string
+	fakeFS      *fakeFS
 }
 
 var (
@@ -157,6 +158,8 @@ var (
 )
 
 func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	log.Printf("[Readdir]: Actual Path=%s", f.actualPath)
+	log.Printf("[Readdir]: Mounted Path=%s", f.mountedPath)
 	dirs, err := os.ReadDir(f.actualPath)
 	if err != nil {
 		return nil, syscall.ENOENT
@@ -180,6 +183,9 @@ func (f *fakeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 }
 
 func (f *fakeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	log.Printf("Lookup name: %s", name)
+	log.Printf("Lookup dir attr: %s", f.mountedPath)
+
 	target := filepath.Join(f.actualPath, name)
 	info, err := os.Lstat(target)
 	if err != nil {
