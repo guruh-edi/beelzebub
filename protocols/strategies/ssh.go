@@ -214,6 +214,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 						}
 
 						if matched {
+							log.Println("matched")
 							commandOutput := command.Handler
 
 							commands := strings.Fields(commandInput)
