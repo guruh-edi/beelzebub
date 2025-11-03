@@ -276,6 +276,7 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 							}
 
 							log.Println("histories: ", histories)
+							log.Println("commandOutput: ", commandOutput)
 
 							histories = append(histories, plugins.Message{Role: plugins.USER.String(), Content: commandInput})
 							histories = append(histories, plugins.Message{Role: plugins.ASSISTANT.String(), Content: commandOutput})
