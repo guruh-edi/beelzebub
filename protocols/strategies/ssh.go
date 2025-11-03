@@ -214,7 +214,6 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 						}
 
 						if matched {
-							log.Println("matched")
 							commandOutput := command.Handler
 
 							commands := strings.Fields(commandInput)
@@ -246,36 +245,37 @@ func (sshStrategy *SSHStrategy) Init(beelzebubServiceConfiguration parser.Beelze
 								if err != nil {
 									log.Errorf("Error executing command: %s", err.Error())
 									commandOutput = "command not found"
-								} else {
-									commandOutput = string(output)
-									commandOutput = strings.TrimSuffix(commandOutput, "\n")
 								}
+
+								commandOutput = string(output)
+								commandOutput = strings.TrimSuffix(commandOutput, "\n")
 
 							} else if command.Plugin == plugins.LLMPluginName {
 								llmProvider, err := plugins.FromStringToLLMProvider(beelzebubServiceConfiguration.Plugin.LLMProvider)
 								if err != nil {
 									log.Errorf("Error fromString: %s", err.Error())
 									commandOutput = "command not found"
-								} else {
-									llmHoneypot := plugins.LLMHoneypot{
-										Histories:    histories,
-										OpenAIKey:    beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
-										Protocol:     tracer.SSH,
-										Host:         beelzebubServiceConfiguration.Plugin.Host,
-										Model:        beelzebubServiceConfiguration.Plugin.LLMModel,
-										Provider:     llmProvider,
-										CustomPrompt: beelzebubServiceConfiguration.Plugin.Prompt,
-									}
-
-									llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
-
-									if commandOutput, err = llmHoneypotInstance.ExecuteModel(commandInput); err != nil {
-										log.Errorf("Error ExecuteModel: %s, %s", commandInput, err.Error())
-										commandOutput = "command not found"
-									}
 								}
 
+								llmHoneypot := plugins.LLMHoneypot{
+									Histories:    histories,
+									OpenAIKey:    beelzebubServiceConfiguration.Plugin.OpenAISecretKey,
+									Protocol:     tracer.SSH,
+									Host:         beelzebubServiceConfiguration.Plugin.Host,
+									Model:        beelzebubServiceConfiguration.Plugin.LLMModel,
+									Provider:     llmProvider,
+									CustomPrompt: beelzebubServiceConfiguration.Plugin.Prompt,
+								}
+
+								llmHoneypotInstance := plugins.InitLLMHoneypot(llmHoneypot)
+
+								if commandOutput, err = llmHoneypotInstance.ExecuteModel(commandInput); err != nil {
+									log.Errorf("Error ExecuteModel: %s, %s", commandInput, err.Error())
+									commandOutput = "command not found"
+								}
 							}
+
+							log.Println("histories: ", histories)
 
 							histories = append(histories, plugins.Message{Role: plugins.USER.String(), Content: commandInput})
 							histories = append(histories, plugins.Message{Role: plugins.ASSISTANT.String(), Content: commandOutput})
